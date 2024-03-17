@@ -1,0 +1,26 @@
+package com.intellij.driverusage
+
+import com.intellij.java.library.JavaLibraryUtil
+import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.search.GlobalSearchScope.allScope
+import com.intellij.psi.search.SearchScope
+import com.intellij.psi.search.UseScopeEnlarger
+
+internal const val REMOTE_ANNOTATION_FQN = "com.intellij.driver.client.Remote"
+
+internal class RemoteUseScopeEnlarger : UseScopeEnlarger() {
+    override fun getAdditionalUseScope(element: PsiElement): SearchScope? {
+        if (element !is PsiClass && element !is PsiMethod) return null
+
+        val project = element.project
+        if (!JavaLibraryUtil.hasLibraryClass(project, REMOTE_ANNOTATION_FQN)) return null
+
+        val remoteClass = JavaPsiFacade.getInstance(project)
+            .findClass(REMOTE_ANNOTATION_FQN, allScope(project)) ?: return null
+
+        return remoteClass.useScope
+    }
+}

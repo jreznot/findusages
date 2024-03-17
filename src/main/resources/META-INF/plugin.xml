@@ -1,0 +1,16 @@
+<idea-plugin>
+    <id>com.intellij.driverusage</id>
+    <name>Driver Usages</name>
+    <vendor>JetBrains</vendor>
+    <description><![CDATA[
+        Provides Find Usages functionality for classes and methods used in @Remote interfaces
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <useScopeEnlarger implementation="com.intellij.driverusage.RemoteUseScopeEnlarger"/>
+        <methodReferencesSearch implementation="com.intellij.driverusage.RemoteMethodReferenceSearcher"/>
+    </extensions>
+</idea-plugin>

@@ -1,6 +1,7 @@
 package com.intellij.driverusage
 
 import com.intellij.codeInsight.AnnotationUtil
+import com.intellij.lang.jvm.JvmModifier
 import com.intellij.openapi.application.QueryExecutorBase
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.roots.FileIndexFacade
@@ -18,23 +19,25 @@ import com.intellij.psi.search.UsageSearchContext
 import com.intellij.psi.search.searches.MethodReferencesSearch
 import com.intellij.psi.util.InheritanceUtil
 import com.intellij.util.Processor
-import org.jetbrains.uast.UMethod
-import org.jetbrains.uast.evaluateString
-import org.jetbrains.uast.getContainingUClass
-import org.jetbrains.uast.toUElement
+import org.jetbrains.uast.*
 
-internal class RemoteMethodReferenceSearcher :
-    QueryExecutorBase<PsiReference, MethodReferencesSearch.SearchParameters>() {
+internal class RemoteMethodReferenceSearcher : QueryExecutorBase<PsiReference, MethodReferencesSearch.SearchParameters>() {
     override fun processQuery(
         queryParameters: MethodReferencesSearch.SearchParameters,
         consumer: Processor<in PsiReference>
     ) {
         val targetMethod = queryParameters.method
+        val methodName = ReadAction.compute<String, Throwable> { targetMethod.name }
 
-        val methodName = targetMethod.name
         queryParameters.optimizer.searchWord(
             methodName,
             ReadAction.compute<SearchScope, RuntimeException> {
+                if (targetMethod.hasModifier(JvmModifier.PRIVATE)
+                    || targetMethod.hasModifier(JvmModifier.PACKAGE_LOCAL)
+                    || targetMethod.hasModifier(JvmModifier.PROTECTED)) {
+                    return@compute EMPTY_SCOPE
+                }
+
                 // do not search for self
                 val searchableClass = targetMethod.containingClass ?: return@compute EMPTY_SCOPE
                 if (AnnotationUtil.isAnnotated(searchableClass, REMOTE_ANNOTATION_FQN, 0)) return@compute EMPTY_SCOPE
@@ -50,7 +53,8 @@ internal class RemoteMethodReferenceSearcher :
                     .findClass(REMOTE_ANNOTATION_FQN, allScope(project))
                     ?: return@compute EMPTY_SCOPE
 
-                remoteClass.useScope.intersectWith(queryParameters.effectiveSearchScope)
+                // we don't care about resolve scope of the method itself
+                remoteClass.useScope.intersectWith(queryParameters.scopeDeterminedByUser)
             },
             UsageSearchContext.IN_CODE,
             true,
@@ -64,6 +68,11 @@ internal class RemoteMethodReferenceSearcher :
 
                     val uClass = method.getContainingUClass() ?: return true
                     val psiMethodFound = method.javaPsi
+
+                    if (psiMethodFound.parameters.size != targetMethod.parameters.size) {
+                        // parameter count mismatch
+                        return true
+                    }
 
                     val psiClass = psiMethodFound.containingClass ?: return true
                     if (!psiClass.isInterface) return true

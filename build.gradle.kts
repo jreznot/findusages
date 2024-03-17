@@ -12,7 +12,7 @@ repositories {
 }
 
 intellij {
-    version.set("2023.3.5")
+    version.set("241-EAP-SNAPSHOT")
     type.set("IC") // Target IDE Platform
 
     plugins.set(listOf("com.intellij.java"))

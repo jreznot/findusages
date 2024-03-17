@@ -12,5 +12,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <useScopeEnlarger implementation="com.intellij.driverusage.RemoteUseScopeEnlarger"/>
         <methodReferencesSearch implementation="com.intellij.driverusage.RemoteMethodReferenceSearcher"/>
+        <codeInsight.lineMarkerProvider language="UAST"
+                                        implementationClass="com.intellij.driverusage.RemoteMethodLineMarkerProvider"/>
     </extensions>
 </idea-plugin>
